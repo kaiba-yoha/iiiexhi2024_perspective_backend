@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask,request
 import flask
 from dotenv import load_dotenv
 
@@ -15,13 +15,14 @@ client=OpenAI(api_key = OPENAI_APIKEY)
 
 app = Flask(__name__, static_folder='.', static_url_path='')
 
+# プロンプトの設定
+client = OpenAI(
+# This is the default and can be omitted
+api_key=os.environ.get("OPENAI_API_KEY"),
+)
+
 @app.route('/')
 def index():
-    # プロンプトの設定
-    client = OpenAI(
-    # This is the default and can be omitted
-    api_key=os.environ.get("OPENAI_API_KEY"),
-    )
 
     chat_completion = client.chat.completions.create(
     messages=[
@@ -50,6 +51,54 @@ def send_eyedata():
     return flask.jsonify({
         "eyes": eye_data
     })
+
+@app.route("/rewrite",methods=["POST"])
+def rewrite_content():
+    try:
+        req=request.json
+        raw_content=req.get("content")
+    except:
+        return flask.jsonify({
+            "status" : "invalid param"
+        })
+    chat_completion = client.chat.completions.create(
+    messages=[
+        {
+            "role": "user",
+            "content": "以下の文章を書き換えてください。ただし、絶対に文字数に変化がないようにすること。¥n ================ ¥n"+raw_content,
+        }
+    ],
+    model="gpt-4-turbo",
+    )
+    return flask.jsonify({
+        "status":"Success",
+        "content":chat_completion.choices[0].message.content
+    })
+
+
+@app.route("/rewrite", methods=["GET"])
+def rewrite_content_qp():
+    try:
+        req=request.args
+        raw_content=req.get("content")
+    except:
+        return flask.jsonify({
+            "status" : "invalid param"
+        })
+    chat_completion = client.chat.completions.create(
+    messages=[
+        {
+            "role": "user",
+            "content": "以下の文章を書き換えてください。書き換える際には内容を逆にすること。ただし、絶対に文字数に変化がないようにすること。¥n ================ ¥n"+raw_content,
+        }
+    ],
+    model="gpt-4-turbo",
+    )
+    return flask.jsonify({
+        "status":"Success",
+        "content":chat_completion.choices[0].message.content.strip()
+    })
+        
 
 
 if __name__ == "__main__":
