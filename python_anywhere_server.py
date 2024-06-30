@@ -12,15 +12,21 @@ app = Flask(__name__, static_folder='.', static_url_path='')
 
 # プロンプトの設定
 client = OpenAI(
-# 環境上では下手打ちで入力（bad）
-api_key="APIKEY",
+# 環境上で手打ち
+api_key="API_KEY",
 )
 
-prompts = ["入力テキストの感想・感情・意見を真逆の意味合いに書き換えてください。ただし固有名詞はそのままにし、元の文字数を厳密に維持してください。",
-"入力テキストの感想・感情・意見など主観的な部分を楽観的に書き替えてください。但し、固有名詞と客観的事実は変更しないでください。",
-"入力テキストの感想・感情・意見など主観的な部分を悲観的に書き替えてください。但し、固有名詞と客観的事実は変更しないでください。",
-"入力テキストの文体を論文で記述するような文体にしてください。但し、固有名詞と客観的事実は変更しないでください。",
-"入力テキストの文体をポエム・詩のように感情的に、情緒的に書き替えてください。但し、固有名詞と客観的事実は変更しないでください。"
+prompts = ["入力テキストの感想・感情・意見を真逆の意味合いに書き換えてください。但し、口調・固有名詞と客観的事実は変更しないでください。",
+"入力テキストの感想・感情・意見など主観的な部分を楽観的に書き替えてください。但し、口調・固有名詞と客観的事実は変更しないでください。",
+"入力テキストの感想・感情・意見など主観的な部分を悲観的に書き替えてください。但し、口調・固有名詞と客観的事実は変更しないでください。",
+"入力テキストの感想・感情・意見など主観的な部分を自己拡張的に書き替えてください。但し、口調・固有名詞と客観的事実は変更しないでください。",
+"入力テキストの感想・感情・意見など主観的な部分を理想主義的に書き替えてください。但し、口調・固有名詞と客観的事実は変更しないでください。",
+"入力テキストの感想・感情・意見など主観的な部分を批判的に書き替えてください。但し、口調・固有名詞と客観的事実は変更しないでください。",
+"入力テキストの感想・感情・意見など主観的な部分を諦念的、現実主義的に書き替えてください。但し、口調・固有名詞と客観的事実は変更しないでください。",
+"入力テキストの感想・感情・意見など主観的な部分を自責的に書き替えてください。但し、口調・固有名詞と客観的事実は変更しないでください。",
+"入力テキストの感想・感情・意見など主観的な部分を他責的に書き替えてください。但し、口調・固有名詞と客観的事実は変更しないでください。",
+"入力テキストの文体を論文で記述するような文体にしてください。但し、口調・固有名詞と客観的事実は変更しないでください。",
+"入力テキストの文体をポエム・詩のように感情的に、情緒的に書き替えてください。但し、口調・固有名詞と客観的事実は変更しないでください。"
 ]
 
 @app.after_request
@@ -83,30 +89,6 @@ def rewrite_content():
     return flask.jsonify({
         "status":"Success",
         "content":chat_completion.choices[0].message.content
-    })
-
-
-@app.route("/rewrite", methods=["GET"])
-def rewrite_content_qp():
-    try:
-        req=request.args
-        raw_content=req.get("content")
-    except:
-        return flask.jsonify({
-            "status" : "invalid param"
-        })
-    chat_completion = client.chat.completions.create(
-    messages=[
-        {
-            "role": "user",
-            "content": "以下の文章を書き換えてください。書き換える際には固有名詞はそのままにし、書き手の感想・感情・意見のみ真逆の意味合いにしてください。ただし、絶対に文字数に変化がないようにすること。¥n ================ ¥n"+raw_content,
-        }
-    ],
-    model="gpt-4-turbo",
-    )
-    return jsonify({
-        "status":"Success",
-        "content":chat_completion.choices[0].message.content.strip()
     })
 
 @app.route('/mutate', methods=['POST'])
@@ -179,6 +161,42 @@ def mutate_text_2():
 
     return jsonify(response), 200
 
+@app.route('/mutate3', methods=['POST'])
+def mutate_text_3():
+    try:
+        req=request.json
+        window_id = req.get("clientId")
+        raw_contents = req.get("targetText") # "。"で分割し、文字列の配列に変換
+        text_index = req.get("textIndex")
+    except:
+        return flask.jsonify({
+            "status":"invalid param"
+            })
+
+    # 分割された文字列の配列に対してテキスト変換処理を行う
+    mutated_texts = []
+    for raw_content in raw_contents:
+        if raw_content.strip():  # 空の文字列をスキップ
+            chat_completion = client.chat.completions.create(
+                messages=[
+                    {
+                        "role": "user",
+                        "content": prompts[int(window_id)]+"\n**ただし、入力文が書きかけや空など、誤りだと思われる場合は余計なものは付け足さず、そのまま入力文を返すこと。**" + "¥n ================ ¥n" + raw_content,
+                    }
+                ],
+                model="gpt-4-turbo",
+            )
+            mutated_text = chat_completion.choices[0].message.content.strip()
+            mutated_texts.append(mutated_text)
+
+    response = {
+        'result': {
+            'mutatedText': mutated_texts,  # 変換後のテキストの配列
+            'textIndex': text_index  # テキストのインデックスの配列
+        }
+    }
+
+    return jsonify(response), 200
 
 @app.route('/mutate', methods=['GET'])
 def get_mutate_text():
