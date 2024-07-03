@@ -228,7 +228,7 @@ def mutate_text_4():
     # 分割された文字列の配列に対してテキスト変換処理を行う
     mutated_texts = []
     for raw_content in raw_contents:
-        if raw_content.strip() and raw_content.endswith("。"):  # 空の文字列をスキップ
+        if raw_content.strip() and raw_content.endswith("。") and raw_content.endswith("．"):  # 空の文字列をスキップ
             chat_completion = client.chat.completions.create(
                 messages=[
                     {
