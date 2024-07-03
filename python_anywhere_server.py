@@ -44,6 +44,23 @@ prompts = ["入力テキストの感想・感情・意見を真逆の意味合�
 
 ]
 
+def process_string(input_string):
+    # 1. 最後の===の位置を見つける
+    last_separator_index = input_string.rfind('===')
+    
+    if last_separator_index != -1:
+        # 2. ===以降の部分文字列を抽出
+        result = input_string[last_separator_index + 3:]
+        
+        # 3. 改行文字を削除
+        result = result.strip()
+        
+        return result
+    else:
+        # ===が見つからない場合は元の文字列をそのまま返す
+        return input_string.strip()
+
+
 @app.after_request
 def after_request(response):
     response.headers.add('Access-Control-Allow-Origin', '*')
@@ -106,75 +123,6 @@ def rewrite_content():
         "content":chat_completion.choices[0].message.content
     })
 
-@app.route('/mutate', methods=['POST'])
-def mutate_text():
-    try:
-        req=request.json
-        window_id = req.get("clientId")
-        raw_content = req.get("targetText")
-        text_index = req.get("textIndex")
-    except:
-        return flask.jsonify({
-            "status":"invalid param"
-            })
-
-    # ここでtarget_textに対してテキスト変換処理を行う
-    chat_completion = client.chat.completions.create(
-    messages=[
-        {
-            "role": "user",
-            "content": prompts[int(window_id)]+"¥n ================ ¥n"+raw_content,
-        }
-    ],
-    model="gpt-4-turbo",
-    )
-    mutated_text=chat_completion.choices[0].message.content.strip()
-
-    response = {
-        'result':{
-            'modifiedText': mutated_text,
-            'textIndex': text_index
-            }
-    }
-
-    return jsonify(response),200
-
-@app.route('/mutate2', methods=['POST'])
-def mutate_text_2():
-    try:
-        req=request.json
-        window_id = req.get("clientId")
-        raw_contents = req.get("targetText").split("。") # "。"で分割し、文字列の配列に変換
-        text_index = req.get("textIndex")
-    except:
-        return flask.jsonify({
-            "status":"invalid param"
-            })
-
-    # 分割された文字列の配列に対してテキスト変換処理を行う
-    mutated_texts = []
-    for raw_content in raw_contents:
-        if raw_content.strip():  # 空の文字列をスキップ
-            chat_completion = client.chat.completions.create(
-                messages=[
-                    {
-                        "role": "user",
-                        "content": prompts[int(window_id)] + "¥n ================ ¥n" + raw_content+"。",
-                    }
-                ],
-                model="gpt-4-turbo",
-            )
-            mutated_text = chat_completion.choices[0].message.content.strip()
-            mutated_texts.append(mutated_text)
-
-    response = {
-        'result': {
-            'mutatedText': mutated_texts,  # 変換後のテキストの配列
-            'textIndex': text_index  # テキストのインデックスの配列
-        }
-    }
-
-    return jsonify(response), 200
 
 @app.route('/mutate3',methods=['POST'])
 def mutate_text_3():
@@ -239,7 +187,7 @@ def mutate_text_4():
                 model="gpt-4-turbo",
             )
             mutated_text = chat_completion.choices[0].message.content.strip()
-            mutated_texts.append(mutated_text)
+            mutated_texts.append(process_string(mutated_text))
 
     response = {
         'result': {
@@ -249,6 +197,7 @@ def mutate_text_4():
     }
 
     return jsonify(response), 200
+
 
 @app.route('/mutate', methods=['GET'])
 def get_mutate_text():
