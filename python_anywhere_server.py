@@ -176,6 +176,7 @@ def mutate_text_2():
 
     return jsonify(response), 200
 
+@app.route('/mutate3',methods=['POST'])
 def mutate_text_3():
     try:
         req=request.json
@@ -196,6 +197,43 @@ def mutate_text_3():
                     {
                         "role": "user",
                         "content": prompts[int(window_id)]+"\n**ただし、入力文が書きかけや空など、誤りだと思われる場合は余計なものは付け足さず、そのまま入力文を返すこと。**" + "¥n ================ ¥n" + raw_content,
+                    }
+                ],
+                model="gpt-4-turbo",
+            )
+            mutated_text = chat_completion.choices[0].message.content.strip()
+            mutated_texts.append(mutated_text)
+
+    response = {
+        'result': {
+            'mutatedText': mutated_texts,  # 変換後のテキストの配列
+            'mutatedLength': text_index  # テキストのインデックスの配列
+        }
+    }
+
+    return jsonify(response), 200
+
+@app.route('/mutate4', methods=['POST'])
+def mutate_text_4():
+    try:
+        req=request.json
+        window_id = req.get("clientId")
+        raw_contents = req.get("targetText") # "。"で分割し、文字列の配列に変換
+        text_index = req.get("mutatedLength")
+    except:
+        return flask.jsonify({
+            "status":"invalid param"
+            })
+
+    # 分割された文字列の配列に対してテキスト変換処理を行う
+    mutated_texts = []
+    for raw_content in raw_contents:
+        if raw_content.strip() and raw_content.endswith("。"):  # 空の文字列をスキップ
+            chat_completion = client.chat.completions.create(
+                messages=[
+                    {
+                        "role": "user",
+                        "content": prompts[int(window_id)]+ "¥n ================ ¥n" + raw_content,
                     }
                 ],
                 model="gpt-4-turbo",
