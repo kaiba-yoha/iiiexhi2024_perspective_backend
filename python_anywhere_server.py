@@ -191,6 +191,7 @@ def mutate_text_4():
 
     response = {
         'result': {
+            'rawContents':raw_contents,
             'mutatedText': mutated_texts,  # 変換後のテキストの配列
             'mutatedLength': text_index  # テキストのインデックスの配列
         }
