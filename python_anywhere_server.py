@@ -181,7 +181,7 @@ def mutate_text_4():
                 messages=[
                     {
                         "role": "user",
-                        "content": prompts[int(window_id)]+ "¥n ================ ¥n" + raw_content,
+                        "content": prompts[int(window_id)]+ " ただし、改行は入力文そのままにすること。¥n ================ ¥n" + raw_content,
                     }
                 ],
                 model="gpt-4-turbo",
