@@ -1,7 +1,8 @@
 from flask import Flask,request, jsonify
 import flask
-
-
+import json
+from datetime import datetime
+import traceback
 import os
 
 
@@ -15,6 +16,8 @@ client = OpenAI(
 # 環境上で手打ち
 api_key="API_KEY",
 )
+
+LOG_FILE = 'api_log.json'
 
 prompts = ["入力テキストの感想・感情・意見を真逆の意味合いに書き換えてください。但し、口調・固有名詞と客観的事実は変更しないでください。",
 "入力テキストの感想・感情・意見など主観的な部分を楽観的に書き替えてください。但し、口調・固有名詞と客観的事実は変更しないでください。",
@@ -59,6 +62,22 @@ def process_string(input_string):
     else:
         # ===が見つからない場合は元の文字列をそのまま返す
         return input_string.strip()
+
+
+def append_to_log(data):
+    """ログファイルにデータを追加する関数"""
+    try:
+        if os.path.exists(LOG_FILE):
+            with open(LOG_FILE, 'r+') as file:
+                file_data = json.load(file)
+                file_data.append(data)
+                file.seek(0)
+                json.dump(file_data, file, indent=2)
+        else:
+            with open(LOG_FILE, 'w') as file:
+                json.dump([data], file, indent=2)
+    except Exception as e:
+        print(f"ログの書き込み中にエラーが発生しました: {str(e)}")
 
 
 @app.after_request
@@ -196,6 +215,8 @@ def mutate_text_4():
             'mutatedLength': text_index  # テキストのインデックスの配列
         }
     }
+
+    append_to_log(response)
 
     return jsonify(response), 200
 
